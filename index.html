@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Lesson: Clay Shooting Game</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            purple: '#5E48C4',
+                            purpleDark: '#4A3AAD',
+                            purpleMid: '#7B6ED4',
+                            purplePale: '#EAE7FE',
+                            purpleGhost: '#F5F4FF',
+                            yellow: '#FFD071',
+                            yellowDark: '#E6B84A',
+                            nearBlack: '#1A1A1A',
+                            lightGrey: '#F2F2F4',
+                            cyan: '#59E4FB',
+                            cyanDark: '#055F6E',
+                            coral: '#ED5661',
+                            coralDark: '#993040'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                        mono: ['Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #F5F4FF;
+            color: #1A1A1A;
+            user-select: none;
+        }
+        .yellow-highlight {
+            position: relative;
+            display: inline-block;
+        }
+        .yellow-highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background-color: #FFD071;
+            z-index: -1;
+            border-radius: 4px;
+        }
+        .slide {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .slide.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* Authentic Scratch Block Styles */
+        .scratch-block {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            box-shadow: inset 0px -2px 0px rgba(0, 0, 0, 0.15), 0px 2px 4px rgba(0,0,0,0.05);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            white-space: nowrap;
+        }
+        .sb-event { background-color: #FFBF00; color: #FFFFFF; border: 1px solid #CC9900; }
+        .sb-control { background-color: #FFAB19; color: #FFFFFF; border: 1px solid #CF8B13; }
+        .sb-motion { background-color: #4C97FF; color: #FFFFFF; border: 1px solid #3373CC; }
+        .sb-sensing { background-color: #5CB1D6; color: #FFFFFF; border: 1px solid #2E8EB8; }
+        .sb-looks { background-color: #9966FF; color: #FFFFFF; border: 1px solid #774DCB; }
+        .sb-sound { background-color: #CF63CF; color: #FFFFFF; border: 1px solid #BD4CBD; }
+        .sb-variable { background-color: #FF8C1A; color: #FFFFFF; border: 1px solid #DB700D; data-operator: #5CB1D6; }
+        .sb-operators { background-color: #59C059; color: #FFFFFF; border: 1px solid #389438; }
+
+        /* Scratch Input Value Bubbles */
+        .sb-input {
+            background-color: #FFFFFF;
+            color: #573A00;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 0 4px;
+            font-weight: 700;
+            display: inline-block;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .sb-input-blue {
+            background-color: #FFFFFF;
+            color: #000000;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 0 4px;
+            font-weight: 700;
+            display: inline-block;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .sb-dropdown {
+            background-color: #FFFFFF;
+            color: #000000;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin: 0 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Visual Card Selector */
+        .visual-card {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #E5E7EB;
+        }
+        .visual-card:hover {
+            border-color: #7B6ED4;
+            transform: translateY(-2px);
+        }
+        .visual-card.selected {
+            border-color: #5E48C4;
+            background-color: #F5F4FF;
+            box-shadow: 0 4px 12px rgba(94, 72, 196, 0.15);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1A1A1A;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #5E48C4;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between overflow-hidden">
+
+    <!-- Top Header / Brand Bar -->
+    
+<header
+    class="w-full bg-brand-purple px-4 py-3.5 flex flex-wrap items-center justify-between gap-3 text-white shadow-md rounded-2xl flex-shrink-0"
+>
+    <div class="flex items-center gap-3">
+        <a
+            href="#"
+            class="bg-brand-yellow hover:bg-brand-yellowDark text-brand-nearBlack px-4 py-2 rounded-xl font-extrabold text-xs md:text-sm shadow-sm transition-all flex items-center gap-2"
+        >
+            <span class="tracking-wide">ALPHAGEN LEARNING</span>
+        </a>
+
+        <span class="font-extrabold text-base md:text-xl tracking-tight text-white">
+            Scratch - Game Based Learning
+        </span>
+    </div>
+
+    <div class="flex items-center gap-3">
+        <button
+            onclick="toggleAudio()"
+            id="audio-btn"
+            class="bg-brand-purpleDark hover:bg-brand-purpleMid text-white p-2 rounded-lg transition-all"
+            title="Toggle Sound"
+            aria-label="Toggle sound"
+        >
+            <i class="fa-solid fa-volume-high text-base" id="sound-icon"></i>
+        </button>
+    </div>
+</header>
+
+    <!-- Main Slide Container -->
+    <main class="flex-1 relative flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+
+        <!-- SLIDE 1: Title & Hook -->
+        <section id="slide-1" class="slide active flex-col items-center justify-center text-center max-w-3xl mx-auto w-full">
+            <div class="w-24 h-24 sm:w-32 sm:h-32 bg-brand-purplePale rounded-full flex items-center justify-center mb-6 shadow-inner relative animate-bounce">
+                <span class="text-5xl sm:text-6xl">🎯</span>
+            </div>
+            <h1 class="text-3xl sm:text-5xl font-extrabold text-brand-nearBlack mb-4 leading-tight"> 
+                Welcome to <span class="text-brand-purple yellow-highlight">Clay Shooting Game!</span>
+            </h1>
+            <button onclick="nextSlide()" class="bg-brand-yellow hover:bg-brand-yellowDark text-brand-nearBlack font-bold text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-200 flex items-center space-x-3">
+                <span>Start Adventure!</span>
+                <span class="text-xl">✨</span>
+            </button>
+        </section>
+
+        <!-- SLIDE 2: Play Clay Shooting Game Button -->
+        <section id="slide-2" class="slide flex-col items-center justify-center max-w-4xl mx-auto w-full">
+            <div class="text-center mb-4">
+                <span class="text-brand-purple font-semibold text-xs uppercase tracking-widest">Action Time</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-brand-nearBlack">Play "Clay Shooting Game"! 🎯</h2>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border-2 border-brand-purplePale shadow-md w-full max-w-xl text-center">
+               <img src="clay_shooting.png" alt="">
+               <br>
+                <a href="https://scratch.mit.edu/projects/542189968" target="_blank" class="inline-block bg-brand-purple hover:bg-brand-purpleDark text-white font-bold text-base px-8 py-3.5 rounded-xl shadow transition transform hover:scale-105">
+                    🎮 Open Clay Shooting Game
+                </a>
+            </div>
+        </section>
+
+        
+<!-- SLIDE 3: Visual Brainstorming Slide -->
+<section id="slide-3" class="slide flex-col items-center justify-center max-w-4xl mx-auto w-full">
+
+    <div class="text-center mb-3">
+        <span class="text-brand-purple font-semibold text-xs uppercase tracking-widest">
+            Brainstorming
+        </span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-brand-nearBlack">
+            Design Your Clay Shooting Game!
+        </h2>
+        <p class="text-xs sm:text-sm text-gray-600 mt-1">
+            Pick one idea for each question. There are no wrong answers!
+        </p>
+    </div>
+
+    <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-brand-purplePale shadow-sm w-full max-w-3xl">
+
+        <!-- QUESTION 1: TARGET MOVEMENT -->
+        <div class="mb-4">
+            <p class="text-xs sm:text-sm font-bold text-brand-nearBlack mb-2">
+                1. How should your targets fly?
+            </p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+
+                <div onclick="selectBrainstorm(this, 'targetMovement', 'Smooth Curved Arcs')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 65" class="w-full h-14">
+                        <path d="M8 48 Q25 2 48 30 T92 15"
+                              fill="none" stroke="#7B6ED4" stroke-width="3"
+                              stroke-dasharray="5 4" stroke-linecap="round"/>
+                        <ellipse cx="48" cy="30" rx="10" ry="6"
+                                 fill="#ED5661" stroke="#993040" stroke-width="2"
+                                 transform="rotate(-20 48 30)"/>
+                        <path d="M83 12 L93 15 L87 23" fill="none"
+                              stroke="#7B6ED4" stroke-width="3"/>
+                    </svg>
+                    <span class="text-xs font-bold">Curvy Flight</span>
+                </div>
+
+                <div onclick="selectBrainstorm(this, 'targetMovement', 'Wild Zigzags')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 65" class="w-full h-14">
+                        <path d="M6 50 L25 12 L43 48 L61 10 L80 42 L94 18"
+                              fill="none" stroke="#7B6ED4" stroke-width="3"
+                              stroke-dasharray="5 4" stroke-linejoin="round"/>
+                        <ellipse cx="61" cy="10" rx="9" ry="6"
+                                 fill="#FFD071" stroke="#E6B84A" stroke-width="2"/>
+                    </svg>
+                    <span class="text-xs font-bold">Zigzag Flight</span>
+                </div>
+
+                <div onclick="selectBrainstorm(this, 'targetMovement', 'Pairs of Targets')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 65" class="w-full h-14">
+                        <path d="M7 20 L88 20 M7 44 L88 44"
+                              fill="none" stroke="#7B6ED4" stroke-width="2.5"
+                              stroke-dasharray="5 4"/>
+                        <ellipse cx="38" cy="20" rx="10" ry="7"
+                                 fill="#ED5661" stroke="#993040" stroke-width="2"/>
+                        <ellipse cx="60" cy="44" rx="10" ry="7"
+                                 fill="#FFD071" stroke="#E6B84A" stroke-width="2"/>
+                        <path d="M81 14 L90 20 L81 26 M81 38 L90 44 L81 50"
+                              fill="none" stroke="#7B6ED4" stroke-width="2.5"/>
+                    </svg>
+                    <span class="text-xs font-bold">Two at Once</span>
+                </div>
+
+                <div onclick="selectBrainstorm(this, 'targetMovement', 'Fast Targets from Edges')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 65" class="w-full h-14">
+                        <path d="M5 15 L36 15 M5 32 L36 32 M5 49 L36 49"
+                              stroke="#59C059" stroke-width="3" stroke-linecap="round"/>
+                        <ellipse cx="52" cy="32" rx="12" ry="8"
+                                 fill="#ED5661" stroke="#993040" stroke-width="2"/>
+                        <path d="M68 32 L91 32 M84 24 L92 32 L84 40"
+                              fill="none" stroke="#7B6ED4" stroke-width="3"/>
+                    </svg>
+                    <span class="text-xs font-bold">Super Fast</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- QUESTION 2: AIMING VISUAL -->
+        <div class="mb-4">
+            <p class="text-xs sm:text-sm font-bold text-brand-nearBlack mb-2">
+                2. What helps players see where they are aiming?
+            </p>
+
+            <div class="grid grid-cols-3 gap-2">
+
+                <div onclick="selectBrainstorm(this, 'aimingVisual', 'Glowing Laser Sight')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 70" class="w-full h-14">
+                        <circle cx="50" cy="35" r="19" fill="#E0FAFE"/>
+                        <path d="M7 58 L89 12" stroke="#ED5661"
+                              stroke-width="4" stroke-linecap="round"/>
+                        <path d="M7 58 L89 12" stroke="#FFD071"
+                              stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="75" cy="20" r="5" fill="#ED5661"/>
+                    </svg>
+                    <span class="text-xs font-bold">Laser Line</span>
+                </div>
+
+                <div onclick="selectBrainstorm(this, 'aimingVisual', 'Pulsing Target Ring')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 70" class="w-full h-14">
+                        <circle cx="50" cy="35" r="25" fill="#F5F4FF"
+                                stroke="#B8ADF7" stroke-width="2"/>
+                        <circle cx="50" cy="35" r="17" fill="none"
+                                stroke="#7B6ED4" stroke-width="3"/>
+                        <circle cx="50" cy="35" r="8" fill="none"
+                                stroke="#ED5661" stroke-width="3"/>
+                        <circle cx="50" cy="35" r="3" fill="#ED5661"/>
+                    </svg>
+                    <span class="text-xs font-bold">Target Ring</span>
+                </div>
+
+                <div onclick="selectBrainstorm(this, 'aimingVisual', 'Trailing Trajectory Line')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 70" class="w-full h-14">
+                        <path d="M8 57 Q32 8 88 17" fill="none"
+                              stroke="#7B6ED4" stroke-width="3"
+                              stroke-dasharray="5 4"/>
+                        <path d="M77 9 L90 17 L78 25" fill="none"
+                              stroke="#7B6ED4" stroke-width="3"/>
+                        <circle cx="8" cy="57" r="6" fill="#FFD071"
+                                stroke="#E6B84A" stroke-width="2"/>
+                        <circle cx="88" cy="17" r="8" fill="#ED5661"
+                                stroke="#993040" stroke-width="2"/>
+                    </svg>
+                    <span class="text-xs font-bold">Flight Trail</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- QUESTION 3: TARGET APPEARANCE -->
+        <div class="mb-4">
+            <p class="text-xs sm:text-sm font-bold text-brand-nearBlack mb-2">
+                3. What will your targets look like?
+            </p>
+
+            <div class="grid grid-cols-3 gap-2">
+
+                <div onclick="selectBrainstorm(this, 'targetAppearance', 'Orange Spinning Discs')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 70" class="w-full h-14">
+                        <ellipse cx="50" cy="35" rx="29" ry="17"
+                                 fill="#F97316" stroke="#C2410C" stroke-width="3"
+                                 transform="rotate(-20 50 35)"/>
+                        <ellipse cx="50" cy="35" rx="16" ry="8"
+                                 fill="#FDBA74" stroke="#C2410C" stroke-width="2"
+                                 transform="rotate(-20 50 35)"/>
+                        <path d="M17 15 Q4 34 18 53" fill="none"
+                              stroke="#7B6ED4" stroke-width="2.5"/>
+                        <path d="M13 44 L18 54 L24 45" fill="none"
+                              stroke="#7B6ED4" stroke-width="2.5"/>
+                    </svg>
+                    <span class="text-xs font-bold">Orange Discs</span>
+                </div>
+
+                <div onclick="selectBrainstorm(this, 'targetAppearance', 'Glowing Neon Saucers')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 70" class="w-full h-14">
+                        <ellipse cx="50" cy="39" rx="31" ry="15"
+                                 fill="#59E4FB" stroke="#055F6E" stroke-width="3"/>
+                        <ellipse cx="50" cy="33" rx="17" ry="13"
+                                 fill="#E0FAFE" stroke="#59C8E8" stroke-width="3"/>
+                        <path d="M20 48 Q50 62 80 48"
+                              fill="none" stroke="#7B6ED4" stroke-width="3"/>
+                        <circle cx="50" cy="39" r="5" fill="#FFD071"/>
+                    </svg>
+                    <span class="text-xs font-bold">Neon Saucers</span>
+                </div>
+
+                <div onclick="selectBrainstorm(this, 'targetAppearance', 'Rocket-Powered Pie Plates')"
+                     class="visual-card p-2 rounded-xl flex flex-col items-center text-center">
+                    <svg viewBox="0 0 100 70" class="w-full h-14">
+                        <ellipse cx="53" cy="31" rx="26" ry="13"
+                                 fill="#C4B5FD" stroke="#7B6ED4" stroke-width="3"/>
+                        <ellipse cx="53" cy="27" rx="14" ry="7"
+                                 fill="#F5F4FF" stroke="#7B6ED4" stroke-width="2"/>
+                        <path d="M29 38 L19 49 L35 44 Z"
+                              fill="#ED5661" stroke="#993040" stroke-width="2"/>
+                        <path d="M22 48 L10 59 L27 55 Z"
+                              fill="#FFD071"/>
+                        <path d="M75 39 L83 48 L70 44 Z"
+                              fill="#59E4FB" stroke="#055F6E" stroke-width="2"/>
+                    </svg>
+                    <span class="text-xs font-bold">Rocket Targets</span>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="text-center">
+            <button onclick="submitVisualIdea()"
+                    class="bg-brand-yellow hover:bg-brand-yellowDark text-brand-nearBlack font-bold px-6 py-2.5 rounded-xl text-xs sm:text-sm transition shadow">
+                Save My Game Ideas!
+            </button>
+
+            <div id="idea-feedback"
+                 class="text-xs font-bold text-brand-purple mt-2 min-h-[18px]"
+                 aria-live="polite">
+            </div>
+        </div>
+
+    </div>
+</section>
+
+        <!-- ================= PART 1: AIMING (SLIDE 5) ================= -->
+
+        <!-- SLIDE 5: Aiming Quiz (Variables & Movements) -->
+        <section id="slide-5" class="slide flex-col items-center justify-center max-w-2xl mx-auto w-full">
+            <div class="text-center mb-3">
+                <span class="text-brand-purple font-semibold text-xs uppercase tracking-widest">Part 1 Quiz</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-brand-nearBlack">Tracking the Shooter 🎯</h2>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border-2 border-brand-purplePale shadow-sm w-full">
+                <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-3 text-center">Which block helps the shooter follow your mouse pointer?</p>
+                <div class="space-y-2.5 mb-4">
+                    <button onclick="checkAnswer(5, 1, true)" id="q5-opt1" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">A)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-motion">go to <span class="sb-dropdown">mouse-pointer ▼</span></div></div>
+                    </button>
+                    <button onclick="checkAnswer(5, 2, false)" id="q5-opt2" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">B)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-motion">glide <span class="sb-input-blue">1</span> secs to x: <span class="sb-input">0</span> y: <span class="sb-input">0</span></div></div>
+                    </button>
+                    <button onclick="checkAnswer(5, 3, false)" id="q5-opt3" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">C)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-motion">change x by <span class="sb-input-blue">10</span></div></div>
+                    </button>
+                    <button onclick="checkAnswer(5, 4, false)" id="q5-opt4" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">D)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-motion">turn ↻ <span class="sb-input-blue">15</span> degrees</div></div>
+                    </button>
+                </div>
+                <div id="q5-feedback" class="text-xs font-bold text-center min-h-[20px]"></div>
+            </div>
+        </section>
+
+        <!-- ================= PART 2: TARGET MOVEMENT (SLIDES 6 - 7) ================= -->
+
+        <!-- SLIDE 6: Part 2 Info / Concept (Clay Sprite Path) -->
+        <section id="slide-6" class="slide flex-col items-center justify-center max-w-4xl mx-auto w-full">
+            <div class="text-center mb-3">
+                <span class="text-brand-purple font-semibold text-xs uppercase tracking-widest">Part 2: Target Movement</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-brand-nearBlack">Move the Clay Sprite from One Corner to Another 🥏</h2>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border-2 border-brand-purplePale shadow-sm w-full max-w-xl text-center">
+                <!-- <div class="text-4xl mb-2">↗️✈️</div> -->
+                <p class="text-xs sm:text-sm text-gray-600 mb-4">
+                    Targets need to travel across the screen smoothly. 
+                </p>
+                <a href="https://scratchconceptrepeat.vercel.app/" target="_blank" class="inline-block bg-brand-yellow hover:bg-brand-yellowDark text-brand-nearBlack font-bold text-xs sm:text-sm px-6 py-3 rounded-xl shadow transition transform hover:scale-105 mb-2">
+                    Open Repeat Until Presentation
+                </a>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Target Movement Quiz (If-Else & Control) -->
+        <section id="slide-7" class="slide flex-col items-center justify-center max-w-2xl mx-auto w-full">
+            <div class="text-center mb-3">
+                <span class="text-brand-purple font-semibold text-xs uppercase tracking-widest">Part 2 Quiz</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-brand-nearBlack">Checking Boundaries 🔀</h2>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border-2 border-brand-purplePale shadow-sm w-full">
+                <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-3 text-center">Which block lets your target do one thing if it is hit, and something else if it reaches the edge?</p>
+                <div class="space-y-2.5 mb-4">
+                    <button onclick="checkAnswer(7, 1, false)" id="q7-opt1" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">A)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-control">repeat <span class="sb-input">10</span></div></div>
+                    </button>
+                    <button onclick="checkAnswer(7, 2, true)" id="q7-opt2" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">B)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-control">if-else</div></div>
+                    </button>
+                    <button onclick="checkAnswer(7, 3, false)" id="q7-opt3" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">C)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-control">forever</div></div>
+                    </button>
+                    <button onclick="checkAnswer(7, 4, false)" id="q7-opt4" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">D)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-control">wait <span class="sb-input">1</span> secs</div></div>
+                    </button>
+                </div>
+                <div id="q7-feedback" class="text-xs font-bold text-center min-h-[20px]"></div>
+            </div>
+        </section>
+
+        <!-- ================= PART 3: RANDOM ANGLES (SLIDES 8 - 9) ================= -->
+
+        <!-- SLIDE 8: Part 3 Info / Concept (Randomization & Operators) -->
+        <section id="slide-8" class="slide flex-col items-center justify-center max-w-4xl mx-auto w-full">
+            <div class="text-center mb-3">
+                <span class="text-brand-purple font-semibold text-xs uppercase tracking-widest">Part 3: Random Angles</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-brand-nearBlack">Randomize the Angles in Which the Clay Sprite Comes In 🎲</h2>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border-2 border-brand-purplePale shadow-sm w-full max-w-xl text-center">
+                <div class="flex justify-center space-x-2 mb-3">
+                    <a href="https://scratchconceptrandom.vercel.app/" target="_blank" class="inline-block bg-brand-yellow hover:bg-brand-yellowDark text-brand-nearBlack font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow transition">
+                        🔗 Random Block Presentation
+                    </a>
+                    <a href="https://scratchconceptslogicaloperators.vercel.app/" target="_blank" class="inline-block bg-brand-cyanDark hover:bg-brand-cyan text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow transition">
+                        🔗 Logical Operator (AND) Presentation
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: Randomness & Operators Quiz -->
+        <section id="slide-9" class="slide flex-col items-center justify-center max-w-2xl mx-auto w-full">
+            <div class="text-center mb-3">
+                <span class="text-brand-purple font-semibold text-xs uppercase tracking-widest">Part 3 Quiz</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-brand-nearBlack">Unpredictable Targets 🎲</h2>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border-2 border-brand-purplePale shadow-sm w-full">
+                <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-3 text-center">Which block makes the target start with a surprise number each time?</p>
+                <div class="space-y-2.5 mb-4">
+                    <button onclick="checkAnswer(9, 1, false)" id="q9-opt1" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">A)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-operators">&lt; <span class="sb-input">50</span> and <span class="sb-input">50</span> &gt;</div></div>
+                    </button>
+                    <button onclick="checkAnswer(9, 2, true)" id="q9-opt2" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">B)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-operators">pick random <span class="sb-input">1</span> to <span class="sb-input">10</span></div></div>
+                    </button>
+                    <button onclick="checkAnswer(9, 3, false)" id="q9-opt3" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">C)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-operators">( <span class="sb-input">10</span> + <span class="sb-input">10</span> )</div></div>
+                    </button>
+                    <button onclick="checkAnswer(9, 4, false)" id="q9-opt4" class="w-full text-left p-2.5 rounded-xl border-2 border-gray-200 hover:border-brand-purple text-xs font-medium transition flex items-center justify-between bg-gray-50">
+                        <span class="text-gray-500 font-bold mr-2">D)</span>
+                        <div class="flex-1 flex justify-center"><div class="scratch-block sb-operators">join <span class="sb-input">apple</span> and <span class="sb-input">banana</span></div></div>
+                    </button>
+                </div>
+                <div id="q9-feedback" class="text-xs font-bold text-center min-h-[20px]"></div>
+                <button onclick="finishLesson()" class="mt-4 bg-brand-yellow hover:bg-brand-yellowDark text-brand-nearBlack font-bold px-6 py-3 rounded-xl shadow transition">Finish Lesson 🎉</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <footer class="bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center z-10">
+        <button id="btn-prev" onclick="prevSlide()" class="bg-gray-100 hover:bg-gray-200 text-brand-nearBlack font-bold px-4 py-2 rounded-xl text-xs sm:text-sm transition flex items-center space-x-1">
+            <span>⬅️</span>
+            <span>Previous</span>
+        </button>
+
+        <!-- <select id="slide-jump" onchange="jumpToSlide(this.value)" class="bg-brand-purpleGhost border border-brand-purpleMid text-brand-purple text-xs font-bold px-3 py-2 rounded-xl focus:outline-none">
+            <option value="1">1. Welcome</option>
+            <option value="2">2. Play Clay Shooting Game</option>
+            <option value="3">3. Visual Brainstorming</option>
+            <option value="5">5. Part 1 Quiz: Tracking</option>
+            <option value="6">6. Part 2: Target Movement</option>
+            <option value="7">7. Part 2 Quiz: If-Else</option>
+            <option value="8">8. Part 3: Random Angles & Operators</option>
+        </select> -->
+
+        <button id="btn-next" onclick="nextSlide()" class="bg-brand-purple hover:bg-brand-purpleDark text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm transition flex items-center space-x-1 shadow">
+            <span>Next</span>
+            <span>➡️</span>
+        </button>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 9;
+        let selectedThemeName = "";
+        let warmupChoice = "";
+
+        let brainstormChoices = {
+    targetMovement: "",
+    aimingVisual: "",
+    targetAppearance: ""
+};
+
+let audioEnabled = true;
+
+function toggleAudio() {
+    audioEnabled = !audioEnabled;
+
+    const icon = document.getElementById('sound-icon');
+    const button = document.getElementById('audio-btn');
+
+    icon.className = audioEnabled
+        ? 'fa-solid fa-volume-high text-base'
+        : 'fa-solid fa-volume-xmark text-base';
+
+    button.title = audioEnabled ? 'Turn Sound Off' : 'Turn Sound On';
+    button.setAttribute(
+        'aria-label',
+        audioEnabled ? 'Turn sound off' : 'Turn sound on'
+    );
+
+    if (audioEnabled && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+        // Web Audio API Sound Synthesizer
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (!audioEnabled) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'click') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            } else if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'incorrect') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        // Navigation Engine
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, idx) => {
+                slide.classList.remove('active');
+                if (idx + 1 === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+
+
+            document.getElementById('btn-prev').style.visibility = currentSlide === 1 ? 'hidden' : 'visible';
+            document.getElementById('btn-next').style.visibility = currentSlide === totalSlides ? 'hidden' : 'visible';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                playSound('click');
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                playSound('click');
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function jumpToSlide(num) {
+            playSound('click');
+            currentSlide = parseInt(num);
+            updateSlide();
+        }
+
+        function selectWarmup(element, choice) {
+            playSound('click');
+            element.parentElement.querySelectorAll('.visual-card').forEach(card => card.classList.remove('selected'));
+            element.classList.add('selected');
+            warmupChoice = choice;
+            document.getElementById('warmup-feedback').textContent = `Great idea: ${choice}! What would you add to make it even more fun?`;
+        }
+
+        function selectBrainstorm(element, category, choice) {
+            playSound('click');
+
+            const parent = element.parentElement;
+            parent.querySelectorAll('.visual-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            element.classList.add('selected');
+
+            const customInput = document.getElementById(`${category}-custom`);
+            if (customInput) {
+                customInput.value = "";
+            }
+
+            brainstormChoices[category] = choice;
+        }
+
+        function customBrainstorm(category) {
+            const customInput = document.getElementById(`${category}-custom`);
+            const customValue = customInput.value.trim();
+
+            const inputParent = customInput.parentElement;
+            inputParent.querySelectorAll('.visual-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            brainstormChoices[category] = customValue;
+        }
+
+        function submitVisualIdea() {
+    if (!audioEnabled) {
+        // Continue normally with sound disabled.
+    } else {
+        playSound('click');
+    }
+
+    const feedback = document.getElementById('idea-feedback');
+
+    const allSelected =
+        brainstormChoices.targetMovement !== "" &&
+        brainstormChoices.aimingVisual !== "" &&
+        brainstormChoices.targetAppearance !== "";
+
+    if (allSelected) {
+        feedback.textContent =
+            `Your game plan is ready! Movement: ${brainstormChoices.targetMovement}. ` +
+            `Aiming: ${brainstormChoices.aimingVisual}. ` +
+            `Targets: ${brainstormChoices.targetAppearance}.`;
+
+        if (audioEnabled) playSound('correct');
+
+        if (typeof confetti === 'function') {
+            confetti({
+                particleCount: 80,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+    } else {
+        feedback.textContent =
+            'Choose one picture for each question first!';
+
+        if (audioEnabled) playSound('incorrect');
+    }
+}
+
+        function finishLesson() {
+            playSound('correct');
+            if (typeof confetti === 'function') confetti({ particleCount: 160, spread: 100, origin: { y: 0.6 } });
+            const feedback = document.getElementById('q9-feedback');
+            feedback.style.color = '#5E48C4';
+            feedback.textContent = 'Amazing work, Game Designer! You finished the lesson. Keep creating!';
+            document.getElementById('btn-next').style.visibility = 'hidden';
+        }
+
+        function checkAnswer(slideNum, optNum, isCorrect) {
+            const feedbackEl = document.getElementById(`q${slideNum}-feedback`);
+            
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`q${slideNum}-opt${i}`);
+                if (btn) btn.style.borderColor = "#E5E7EB";
+            }
+
+            const selectedBtn = document.getElementById(`q${slideNum}-opt${optNum}`);
+
+            if (isCorrect) {
+                playSound('correct');
+                selectedBtn.style.borderColor = "#22C55E";
+                feedbackEl.style.color = "#16A34A";
+                feedbackEl.innerHTML = `🎉 You got it! This block helps your game do exactly that.`;
+                
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            } else {
+                playSound('incorrect');
+                selectedBtn.style.borderColor = "#EF4444";
+                feedbackEl.style.color = "#DC2626";
+                feedbackEl.innerHTML = `Good try! Take another look at the blocks and try again.`;
+            }
+        }
+
+        updateSlide();
+    </script>
+</body>
+</html>
